@@ -146,6 +146,7 @@ abstract class Expense{
             // adding current user too to add in the split
             userIds.add(this.getAddedBy());
         }
+        userIds = userIds.stream().distinct().collect(Collectors.toList());
         return userIds;
     }
 
@@ -403,7 +404,7 @@ class ExpenseManager{
             if(balance.getValue() > 0.0){
                 System.out.println(balance.getKey() + " owes " + userId + " " + balance.getValue());
             } else {
-                System.out.println(userId + " owes " + balance.getKey() + " " + balance.getValue());
+                System.out.println(userId + " owes " + balance.getKey() + " " + -1*balance.getValue());
             }
         }
     }
@@ -522,6 +523,19 @@ public class SplitwiseLLD {
 
         expenseManager.addExpense(expense);
 
+        Expense secondExpense = expenseFactory.getExpense(ExpenseType.EQUAL);
+        secondExpense.setId("1");
+        secondExpense.setAmount(600.3);
+        List<String> secondPaidToIds = new ArrayList<>();
+        secondPaidToIds.add("1");
+        secondPaidToIds.add("3");
+        secondPaidToIds.add("4");
+        secondExpense.setIndividualIds(secondPaidToIds);
+        secondExpense.setAddedBy("2");
+
+        expenseManager.addExpense(secondExpense);
+
         expenseManager.showBalance("4");
+        expenseManager.showBalance("2");
     }
 }
