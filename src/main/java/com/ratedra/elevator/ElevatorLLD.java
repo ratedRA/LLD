@@ -18,6 +18,7 @@ class Elevator implements Observer { // observer
         this.currentFloor = 0;
         this.currentDirection = Direction.IDLE;
         this.upQueue = new PriorityQueue<>();
+        this.elevatorManager = ElevatorManager.getInstance();
         this.downQueue = new PriorityQueue<>(new Comparator<Integer>() {
             @Override
             public int compare(Integer o1, Integer o2) {
@@ -68,7 +69,19 @@ interface Observer{
     public void update();
 }
 
-abstract class Request{ // observable
+abstract class Observable{
+    private List<Observer> observers = new ArrayList<>();
+
+    public void addObservers(Observer elevator){
+        observers.add(elevator);
+    }
+
+    public void notifyObservers(){
+        observers.stream().forEach(o -> o.update());
+    }
+}
+
+abstract class Request extends Observable{ // observable
     private static Integer requestCounter = 0;
 
     private List<Elevator> observers = new ArrayList<>();
@@ -76,14 +89,6 @@ abstract class Request{ // observable
     public abstract Direction getDirection();
 
     public abstract boolean addToQueue(Elevator elevator, int floor);
-
-    public void addObservers(Observer elevator){
-        observers.add((Elevator) elevator);
-    }
-
-    public void notifyObservers(){
-        this.observers.stream().forEach(o -> o.update());
-    }
 }
 
 class UpRequest extends Request{
@@ -100,7 +105,7 @@ class UpRequest extends Request{
             Queue<Integer> upQueue = elevator.getUpQueue();
             if (!upQueue.contains(floor)) {
                 upQueue.offer(floor);
-                notifyObservers();
+                super.notifyObservers();
             }
         } catch (Exception exception){
             return false;
@@ -162,10 +167,21 @@ enum Direction{
 }
 
 class ElevatorManager{
+
+    private static ElevatorManager INSTANCE;
+    private ElevatorManager(){};
+
+    public static ElevatorManager getInstance(){
+        if(INSTANCE == null){
+            INSTANCE = new ElevatorManager();
+        }
+
+        return INSTANCE;
+    }
     public void addRequest(Elevator elevator, Direction direction, int floor){
         RequestFactory requestFactory =  RequestFactory.getInstance();
         Request request = requestFactory.getRequest(direction);
-
+        request.addObservers(elevator);
         boolean success = request.addToQueue(elevator, floor);
         if(success){
             System.out.println("Request was added successfully");
@@ -190,6 +206,7 @@ class ElevatorManager{
             Integer nextFloor = upQueue.poll();
             if(elevator.getCurrentFloor() < nextFloor) {
                 elevator.setCurrentFloor(nextFloor);
+                System.out.println("Elevator reached " + nextFloor + " floor");
             }
         }
     }
@@ -201,6 +218,7 @@ class ElevatorManager{
             Integer nextFloor = downQueue.poll();
             if(elevator.getCurrentFloor() > nextFloor) {
                 elevator.setCurrentFloor(nextFloor);
+                System.out.println("Elevator reached " + nextFloor + " floor");
             }
         }
     }
@@ -210,6 +228,12 @@ class ElevatorManager{
 
 public class ElevatorLLD {
     public static void main(String[] args) {
+        Elevator elevator = new Elevator();
 
+        ElevatorManager elevatorManager = ElevatorManager.getInstance();
+        elevatorManager.addRequest(elevator, Direction.UP, 3);
+        elevatorManager.addRequest(elevator, Direction.DOWN, 2);
+        elevatorManager.addRequest(elevator, Direction.UP, 4);
+        elevatorManager.addRequest(elevator, Direction.DOWN, 1);
     }
 }
