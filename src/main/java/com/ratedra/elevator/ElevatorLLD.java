@@ -207,6 +207,9 @@ class ElevatorManager{
             if(elevator.getCurrentFloor() < nextFloor) {
                 elevator.setCurrentFloor(nextFloor);
                 System.out.println("Elevator reached " + nextFloor + " floor");
+            } else {
+                System.out.println("It is actually a move down request");
+                addRequest(elevator, Direction.DOWN, nextFloor);
             }
         }
     }
@@ -219,6 +222,9 @@ class ElevatorManager{
             if(elevator.getCurrentFloor() > nextFloor) {
                 elevator.setCurrentFloor(nextFloor);
                 System.out.println("Elevator reached " + nextFloor + " floor");
+            } else {
+                System.out.println("It is actually a move up request");
+                addRequest(elevator, Direction.UP, nextFloor);
             }
         }
     }
@@ -232,8 +238,8 @@ public class ElevatorLLD {
 
         ElevatorManager elevatorManager = ElevatorManager.getInstance();
         elevatorManager.addRequest(elevator, Direction.UP, 3);
+        elevatorManager.addRequest(elevator, Direction.DOWN, 1);
         elevatorManager.addRequest(elevator, Direction.DOWN, 2);
         elevatorManager.addRequest(elevator, Direction.UP, 4);
-        elevatorManager.addRequest(elevator, Direction.DOWN, 1);
     }
 }
