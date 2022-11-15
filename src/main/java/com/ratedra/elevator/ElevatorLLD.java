@@ -82,9 +82,6 @@ abstract class Observable{
 }
 
 abstract class Request extends Observable{ // observable
-    private static Integer requestCounter = 0;
-
-    private List<Elevator> observers = new ArrayList<>();
 
     public abstract Direction getDirection();
 
