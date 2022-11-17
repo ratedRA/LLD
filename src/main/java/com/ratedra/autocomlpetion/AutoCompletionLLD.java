@@ -1,4 +1,4 @@
-package com.ratedra;
+package com.ratedra.autocomlpetion;
 
 import java.util.ArrayList;
 import java.util.List;
