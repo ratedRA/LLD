@@ -209,6 +209,7 @@ class FlightTrackingService implements TrackingService{
         for(Tracker tracker : activeTrackers){
             String hashedTags = tracker.getHashedTags();
             String[] split = hashedTags.split("#");
+            // search text could be the subpart of the tracking hashedTag
             String searchText = buildSearchText(tags, split);
             if(searchText.equals(inputSearchHash)){
                 ids.add(tracker.getId());
@@ -261,13 +262,8 @@ public class PendencySystemLLD {
         tags4.add("Karnataka");
         tags4.add("Mysore");
         flightTrackingService.startTracking("2364", tags4);
-        List<String> tags7 = new ArrayList<>();
-        tags7.add("UPI");
-        tags7.add("Karnataka");
-        tags7.add("Mysore");
-        flightTrackingService.startTracking("2364", tags7);
 
-        flightTrackingService.stopTracking("2364");
+        //flightTrackingService.stopTracking("2364");
         List<String> tags3 = new ArrayList<>();
         tags3.add("wallet");
         //tags3.add("Karnataka");
