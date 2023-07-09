@@ -1,6 +1,8 @@
 package com.ratedra.keyvaluestore;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 class Tuple<K, V>{
     K key;
@@ -56,16 +58,28 @@ class CustomLinkedList<K, V>{
         }
         return null;
     }
+
+    public List<Tuple<K,V>> getAllTuples(){
+        List<Tuple<K,V>> tuples = new ArrayList<>();
+        Node<K, V> itr = head;
+        while(itr != null){
+          tuples.add(itr.data);
+        }
+        return tuples;
+    }
 }
 
 class KeyValueStore<K, V>{
     private static final Integer DEFAULT_INITIAL_CAPACITY = 10;
+    private static final Double DEFAULT_LOAD_FACTOR = 0.75;
+    private int size;
+    private int capacity = DEFAULT_INITIAL_CAPACITY;
 
     private ArrayList<CustomLinkedList<K, V>> buckets;
 
     public KeyValueStore() {
-        this.buckets = new ArrayList<>(DEFAULT_INITIAL_CAPACITY);
-        for (int i = 0; i < DEFAULT_INITIAL_CAPACITY; i++) {
+        this.buckets = new ArrayList<>(capacity);
+        for (int i = 0; i < capacity; i++) {
             buckets.add(null);
         }
     }
@@ -76,10 +90,48 @@ class KeyValueStore<K, V>{
         if(currentBucket == null){
             CustomLinkedList<K, V> bucket = new CustomLinkedList<>();
             bucket.push(new Tuple<>(key, value));
-            buckets.add(bucketIndex, bucket);
+            buckets.set(bucketIndex, bucket);
         } else{
             currentBucket.push(new Tuple<>(key, value));
         }
+        size+=1;
+        if(shouldResize()){
+            CompletableFuture.runAsync(() -> resize());
+        }
+    }
+
+    void resize(){
+        int newCapacity = buckets.size()*2;
+        ArrayList<CustomLinkedList<K,V>> newBuckets = new ArrayList<>(newCapacity);
+
+        // initialize with null
+        for (int i = 0; i < newCapacity; i++) {
+            newBuckets.add(null);
+        }
+
+        for(CustomLinkedList<K, V> bucket : buckets){
+            if(bucket != null){
+                List<Tuple<K,V>> allTuples = bucket.getAllTuples();
+                for(Tuple<K,V> tuple : allTuples){
+                    int bucketIndex = getBucketIndexForResize(tuple.key, newCapacity);
+                    CustomLinkedList<K, V> currentBucket = newBuckets.get(bucketIndex);
+                    if(currentBucket == null){
+                        CustomLinkedList<K, V> newBucket = new CustomLinkedList<>();
+                        newBucket.push(new Tuple<>(tuple.key, tuple.value));
+                        newBuckets.set(bucketIndex, bucket);
+                    } else{
+                        currentBucket.push(new Tuple<>(tuple.key, tuple.value));
+                    }
+                }
+            }
+        }
+        buckets = newBuckets;
+        capacity = newCapacity;
+    }
+
+    private boolean shouldResize(){
+        double loadFactor = ((double) size)/buckets.size();
+        return loadFactor>DEFAULT_LOAD_FACTOR;
     }
 
     V get(K key){
@@ -95,7 +147,13 @@ class KeyValueStore<K, V>{
     private int getBucketIndex(K key){
         assert key != null;
 
-        return Math.abs(key.hashCode()) % buckets.size();
+        return Math.abs(key.hashCode()) % capacity;
+    }
+
+    private int getBucketIndexForResize(K key, int newCapacity){
+        assert key != null;
+
+        return Math.abs(key.hashCode()) % newCapacity;
     }
 }
 
