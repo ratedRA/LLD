@@ -1,4 +1,4 @@
-package com.javaThread;
+package com.ratedra.thread;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -22,7 +22,9 @@ public class ConcurrentQueueImpl {
         Thread[] producerThread = new Thread[threadPoolSize];
         // 100 items -> 100/10 -> 10 items
         for(int i=0; i<threadPoolSize; i++){
-            producerThread[i] = new Thread(new Producer(numOfItem/threadPoolSize, queue, lock));
+            producerThread[i] = new Thread(
+                    new Producer(numOfItem/threadPoolSize,
+                            queue, lock));
             producerThread[i].start();
         }
 
@@ -38,7 +40,8 @@ public class ConcurrentQueueImpl {
 
         Thread[] consumerThread = new Thread[threadPoolSize];
         for(int i=0; i<threadPoolSize; i++){
-            consumerThread[i] = new Thread(new Consumer(numOfItem/threadPoolSize, queue, lock));
+            consumerThread[i] = new Thread(
+                    new Consumer(numOfItem/threadPoolSize, queue, lock));
             consumerThread[i].start();
         }
 
