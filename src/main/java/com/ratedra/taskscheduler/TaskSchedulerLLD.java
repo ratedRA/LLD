@@ -8,6 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+
 /**
  * The task scheduler should have a fixed number of worker threads that are responsible for executing the tasks.
  * Each task should have an associated priority value (integer) indicating its priority. The lower the value, the higher the priority.
@@ -27,6 +28,12 @@ public class TaskSchedulerLLD {
         scheduler.addTask(new Task("Task D", 2));
         scheduler.addTask(new Task("Task E", 1));
 
+        scheduler.addTask(new Task("Task F", 6));
+        scheduler.addTask(new Task("Task G", 2));
+        scheduler.addTask(new Task("Task H", 4));
+        scheduler.addTask(new Task("Task I", 8));
+        scheduler.addTask(new Task("Task J", 3));
+
         scheduler.start();
     }
 }
@@ -39,6 +46,13 @@ class Task{
         this.name = name;
         this.priority = priority;
     }
+
+    @Override
+    public String toString() {
+        return
+                 name + " "
+                 + priority;
+    }
 }
 
 class TaskScheduler{
@@ -46,6 +60,9 @@ class TaskScheduler{
     private Lock lock;
     private Queue<Task> taskQueue;
     private ExecutorService executorService;
+
+    private Integer count = 0;
+
 
     public TaskScheduler() {
         this.lock = new ReentrantLock();
@@ -64,17 +81,18 @@ class TaskScheduler{
 
     public void start(){
         while(!taskQueue.isEmpty()){
-            lock.lock();
-            try {
                 Task task = taskQueue.poll();
                 Callable<Void> taskJob = () -> {
-                    System.out.println("executing -> " + task.name);
+                    synchronized (count){
+                        count = count+1;
+                    }
+
+                        System.out.println("executing -> " + task.toString() + " count " + count);
+
                     return Void.TYPE.newInstance();
                 };
                 executorService.submit(taskJob);
-            } finally {
-                lock.unlock();
-            }
+
         }
         executorService.shutdown();
     }
