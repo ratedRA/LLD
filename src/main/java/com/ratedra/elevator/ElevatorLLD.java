@@ -163,6 +163,8 @@ enum Direction{
     IDLE;
 }
 
+// for testing
+
 class ElevatorManager{
 
     private static ElevatorManager INSTANCE;
