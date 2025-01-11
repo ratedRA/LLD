@@ -1,7 +1,9 @@
 package com.ratedra.keyvaluestore;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 class Tuple<K, V>{
@@ -159,6 +161,6 @@ class KeyValueStore<K, V>{
 
 public class KeyValueStoreLLD {
     public static void main(String[] args) {
-
+        Map<Integer, Integer> map = new HashMap<>();
     }
 }
