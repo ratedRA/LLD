@@ -84,70 +84,77 @@ class ErrorService implements Transaction {
 }
 
 class Orchestrator {
-    public void   orchestrateDistributedTransaction(boolean forceError) {
+    public void orchestrateDistributedTransaction(boolean forceError) {
+        ExecutorService executorService = Executors.newFixedThreadPool(4);
+        User user = new User();
+        Order order = new Order();
+        Notification notification = new Notification();
+        ErrorService errorService = new ErrorService();
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        futures.add(CompletableFuture.runAsync(() -> user.createOrUpdate(), executorService));
+        futures.add(CompletableFuture.runAsync(() -> order.createOrUpdate(), executorService));
+        futures.add(CompletableFuture.runAsync(() -> notification.createOrUpdate(), executorService));
+        if (forceError) {
+            futures.add(CompletableFuture.runAsync(() -> errorService.createOrUpdate(), executorService));
+        }
+        List<CompletableFuture<Void>> wrappedFutures = new ArrayList<>();
+        AtomicBoolean failed = new AtomicBoolean(false);
 
-            ExecutorService executorService = Executors.newFixedThreadPool(4);
-            User user = new User();
-            Order order = new Order();
-            Notification notification = new Notification();
-            ErrorService errorService = new ErrorService();
-            List<CompletableFuture<Void>> futures = new ArrayList<>();
-            futures.add(CompletableFuture.runAsync(() -> user.createOrUpdate(), executorService));
-            futures.add(CompletableFuture.runAsync(() -> order.createOrUpdate(), executorService));
-            futures.add(CompletableFuture.runAsync(() -> notification.createOrUpdate(), executorService));
-            if (forceError) {
-                futures.add(CompletableFuture.runAsync(() -> errorService.createOrUpdate(), executorService));
-            }
-            List<CompletableFuture<Void>> wrappedFutures = new ArrayList<>();
-            AtomicBoolean failed = new AtomicBoolean(false);
-
-            futures.forEach(future -> {
-                wrappedFutures.add(future.handle((result, ex) -> {
-                    if (ex != null) {
-                        System.out.println("Transaction failed due to: " + ex.getMessage());
-                        failed.set(true);
-                    }
-                    return null;
-                }));
-            });
-            CompletableFuture<Void> allFutures = CompletableFuture.allOf(wrappedFutures.toArray(new CompletableFuture[0]));
-
-            if (failed.get()) {
-                System.out.println("update failed, rolling back");
-                List<CompletableFuture<Void>> rollbackFuture = new ArrayList<>();
-                rollbackFuture.add(CompletableFuture.runAsync(() -> user.rollback(), executorService));
-                rollbackFuture.add(CompletableFuture.runAsync(() -> order.rollback(), executorService));
-                rollbackFuture.add(CompletableFuture.runAsync(() -> notification.rollback(), executorService));
-                if (forceError) {
-                    rollbackFuture.add(CompletableFuture.runAsync(() -> errorService.rollback(), executorService));
+        futures.forEach(future -> {
+            wrappedFutures.add(future.handle((result, ex) -> {
+                if (ex != null) {
+                    System.out.println("Transaction failed due to: " + ex.getMessage());
+                    failed.set(true);
                 }
+                return null;
+            }));
+        });
+        CompletableFuture<Void> allFutures = CompletableFuture.allOf(wrappedFutures.toArray(new CompletableFuture[0]));
 
-                CompletableFuture<Void> allOf = CompletableFuture.allOf(rollbackFuture.toArray(new CompletableFuture[0]));
-                allOf.thenRun(() -> rollbackFuture.forEach(r -> {
-                    r.exceptionally(ex -> {
-                        System.out.println("failed to rollback transactions");
-                        return null;
-                    }).thenRun(() -> System.out.println("rollback finished succesfully"));
-                }));
-            } else {
-                System.out.println("update success, commiting");
-                List<CompletableFuture<Void>> rollbackFuture = new ArrayList<>();
-                rollbackFuture.add(CompletableFuture.runAsync(() -> user.commit(), executorService));
-                rollbackFuture.add(CompletableFuture.runAsync(() -> order.commit(), executorService));
-                rollbackFuture.add(CompletableFuture.runAsync(() -> notification.commit(), executorService));
-                if (forceError) {
-                    rollbackFuture.add(CompletableFuture.runAsync(() -> errorService.commit(), executorService));
-                }
-
-                CompletableFuture<Void> allOf = CompletableFuture.allOf(rollbackFuture.toArray(new CompletableFuture[0]));
-                allOf.thenRun(() -> rollbackFuture.forEach(r -> {
-                    r.exceptionally(ex -> {
-                        System.out.println("failed to commit");
-                        return null;
-                    }).thenRun(() -> System.out.println("commit finished successfully"));
-                }));
-            }
+        if (failed.get()) {
+            handleError(forceError, user, executorService, order, notification, errorService);
+        } else {
+            handleSuccess(forceError, user, executorService, order, notification, errorService);
+        }
         executorService.shutdown();
+    }
+
+    private static void handleSuccess(boolean forceError, User user, ExecutorService executorService, Order order, Notification notification, ErrorService errorService) {
+        System.out.println("update success, commiting");
+        List<CompletableFuture<Void>> commitFutures = new ArrayList<>();
+        commitFutures.add(CompletableFuture.runAsync(() -> user.commit(), executorService));
+        commitFutures.add(CompletableFuture.runAsync(() -> order.commit(), executorService));
+        commitFutures.add(CompletableFuture.runAsync(() -> notification.commit(), executorService));
+        if (forceError) {
+            commitFutures.add(CompletableFuture.runAsync(() -> errorService.commit(), executorService));
+        }
+
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(commitFutures.toArray(new CompletableFuture[0]));
+        allOf.thenRun(() -> commitFutures.forEach(r -> {
+            r.exceptionally(ex -> {
+                System.out.println("failed to commit");
+                return null;
+            }).thenRun(() -> System.out.println("commit finished successfully"));
+        }));
+    }
+
+    private static void handleError(boolean forceError, User user, ExecutorService executorService, Order order, Notification notification, ErrorService errorService) {
+        System.out.println("update failed, rolling back");
+        List<CompletableFuture<Void>> rollbackFuture = new ArrayList<>();
+        rollbackFuture.add(CompletableFuture.runAsync(() -> user.rollback(), executorService));
+        rollbackFuture.add(CompletableFuture.runAsync(() -> order.rollback(), executorService));
+        rollbackFuture.add(CompletableFuture.runAsync(() -> notification.rollback(), executorService));
+        if (forceError) {
+            rollbackFuture.add(CompletableFuture.runAsync(() -> errorService.rollback(), executorService));
+        }
+
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(rollbackFuture.toArray(new CompletableFuture[0]));
+        allOf.thenRun(() -> rollbackFuture.forEach(r -> {
+            r.exceptionally(ex -> {
+                System.out.println("failed to rollback transactions");
+                return null;
+            }).thenRun(() -> System.out.println("rollback finished succesfully"));
+        }));
     }
 }
 
