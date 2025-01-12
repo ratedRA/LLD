@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 interface Transaction {
     void createOrUpdate();
@@ -129,13 +130,16 @@ class Orchestrator {
             commitFutures.add(CompletableFuture.runAsync(() -> errorService.commit(), executorService));
         }
 
-        CompletableFuture<Void> allOf = CompletableFuture.allOf(commitFutures.toArray(new CompletableFuture[0]));
-        allOf.thenRun(() -> commitFutures.forEach(r -> {
-            r.exceptionally(ex -> {
+        List<CompletableFuture<Object>> wrappedCommitFutures = commitFutures.stream().map(f -> f.handle((result, ex) -> {
+            if(ex != null) {
                 System.out.println("failed to commit");
                 return null;
-            }).thenRun(() -> System.out.println("commit finished successfully"));
-        }));
+            }
+            System.out.println("commit finished successfully");
+            return null;
+        })).collect(Collectors.toList());
+
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(wrappedCommitFutures.toArray(new CompletableFuture[0]));
     }
 
     private static void handleError(boolean forceError, User user, ExecutorService executorService, Order order, Notification notification, ErrorService errorService) {
@@ -148,13 +152,17 @@ class Orchestrator {
             rollbackFuture.add(CompletableFuture.runAsync(() -> errorService.rollback(), executorService));
         }
 
-        CompletableFuture<Void> allOf = CompletableFuture.allOf(rollbackFuture.toArray(new CompletableFuture[0]));
-        allOf.thenRun(() -> rollbackFuture.forEach(r -> {
-            r.exceptionally(ex -> {
-                System.out.println("failed to rollback transactions");
+        List<CompletableFuture<Object>> wrappedRollbackFutures = rollbackFuture.stream().map(f -> f.handle((result, ex) -> {
+            if(ex != null) {
+                System.out.println("failed to rollback");
                 return null;
-            }).thenRun(() -> System.out.println("rollback finished succesfully"));
-        }));
+            }
+            System.out.println("rollback finished successfully");
+            return null;
+        })).collect(Collectors.toList());
+
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(wrappedRollbackFutures.toArray(new CompletableFuture[0]));
+
     }
 }
 
