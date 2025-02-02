@@ -191,10 +191,6 @@ public class SimplifiedKafkaImpl {
                     });
                 }, consumerGroupExecutor);
             });
-
-            for(ConsumerGroup consumerGroup : consumerGroups){
-                consumerGroup.consumers.forEach(Consumer::consume);
-            }
         }
     }
 }
