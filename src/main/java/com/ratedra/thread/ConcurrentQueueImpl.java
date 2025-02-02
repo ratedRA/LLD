@@ -6,11 +6,12 @@ import java.util.Queue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-// queue - in which we could add new messages and also at last remove from it
-// we'll be doing through multiple threads.
-// we'll queue around 1 million of items and also removing all of them
-// expecting - some kind race condition (because resource. i.e - queue)
-// try to resolve the race condition using some kind of locks
+/**
+ *  queue - in which we could add new messages and also at last remove from it
+ we'll be doing through multiple threads.
+ we'll queue around 1 million of items and also removing all of them
+ expecting - some kind race condition (because resource. i.e - queue)
+ try to resolve the race condition using some kind of locks*/
 public class ConcurrentQueueImpl {
     public static void main(String[] args) {
         int numOfItem = 1000000;
