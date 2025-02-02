@@ -147,7 +147,7 @@ public class SimplifiedKafkaImpl {
             try {
                 topicCreationLock.lock();
                 if (topics.containsKey(name)) {
-                    throw new RuntimeException("topic with name already exists, try giving some other name")
+                    throw new RuntimeException("topic with name already exists, try giving some other name");
                 }
                 Topic topic = new Topic(name, partitions);
                 topics.put(name, topic);
